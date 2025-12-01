@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Backend API (.NET)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: calculadorakw-api
+    ports:
+      - "${API_PORT}:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__CalculadoraKW=${DATABASE_CONNECTION_STRING}
+      - Cors__AllowedOrigins__0=http://localhost:${FRONTEND_PORT}
+    depends_on:
+      - db
+    networks:
+      - calculadora-network
+    restart: unless-stopped
+
+  # Frontend (Angular)
+  frontend:
+    build:
+      context: ../calculadora-kw-frontend
+      dockerfile: Dockerfile
+    container_name: calculadorakw-frontend
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      - api
+    networks:
+      - calculadora-network
+    restart: unless-stopped
+
+  # SQL Server Database
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: calculadorakw-db
+    ports:
+      - "${DB_PORT}:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${DB_PASSWORD}
+      - MSSQL_PID=Express
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - calculadora-network
+    restart: unless-stopped
+
+networks:
+  calculadora-network:
+    driver: bridge
+
+volumes:
+  sqlserver_data:
